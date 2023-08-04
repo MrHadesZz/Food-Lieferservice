@@ -3,6 +3,7 @@ package projekt.base;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
+import java.util.Objects;
 
 import static org.tudalgo.algoutils.student.Student.crash;
 
@@ -71,21 +72,27 @@ public final class Location implements Comparable<Location> {
 
     @Override
     public int compareTo(@NotNull Location o) {
-        return crash(); // TODO: H1.1 - remove if implemented
+        return COMPARATOR.compare(this, o);
     }
 
     @Override
     public int hashCode() {
-        return crash(); // TODO: H1.2 - remove if implemented
+        return (x << 16) | (0xFFFF & y);
     }
 
     @Override
     public boolean equals(Object o) {
-        return crash(); // TODO: H1.3 - remove if implemented
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof Location other)) {
+            return false;
+        }
+        return this.x == other.x && this.y == other.y;
     }
 
     @Override
     public String toString() {
-        return crash(); // TODO: H1.4 - remove if implemented
+        return "(" + x + "," + y + ")";
     }
 }
