@@ -1,12 +1,16 @@
 package projekt.delivery.rating;
 
+import projekt.delivery.event.ArrivedAtNodeEvent;
+import projekt.delivery.event.DeliverOrderEvent;
 import projekt.delivery.event.Event;
 import projekt.delivery.routing.PathCalculator;
 import projekt.delivery.routing.Region;
 import projekt.delivery.routing.VehicleManager;
 import projekt.delivery.simulation.Simulation;
 
+import java.util.Deque;
 import java.util.List;
+import java.util.Objects;
 
 import static org.tudalgo.algoutils.student.Student.crash;
 
@@ -24,6 +28,9 @@ public class TravelDistanceRater implements Rater {
     private final PathCalculator pathCalculator;
     private final double factor;
 
+    private long worstDistance = 0;
+    private long actualDistance = 0;
+
     private TravelDistanceRater(VehicleManager vehicleManager, double factor) {
         region = vehicleManager.getRegion();
         pathCalculator = vehicleManager.getPathCalculator();
@@ -32,7 +39,13 @@ public class TravelDistanceRater implements Rater {
 
     @Override
     public double getScore() {
-        return crash(); // TODO: H8.3 - remove if implemented
+        double actualWorstDistance = worstDistance * factor;
+
+        if (actualDistance >= actualWorstDistance || actualWorstDistance == 0) {
+            return 0;
+        }
+
+        return 1 - (actualDistance / actualWorstDistance);
     }
 
     @Override
@@ -42,9 +55,37 @@ public class TravelDistanceRater implements Rater {
 
     @Override
     public void onTick(List<Event> events, long tick) {
-        crash(); // TODO: H8.3 - remove if implemented
-    }
+        events.stream()
+            .filter(DeliverOrderEvent.class::isInstance)
+            .map(DeliverOrderEvent.class::cast)
+            .forEach(deliverOrderEvent -> worstDistance += 2 * getDistance(deliverOrderEvent.getOrder().getRestaurant().getComponent(),
+                region.getNode(deliverOrderEvent.getOrder().getLocation())));
 
+        events.stream()
+            .filter(ArrivedAtNodeEvent.class::isInstance)
+            .map(ArrivedAtNodeEvent.class::cast)
+            .forEach(arrivedAtNodeEvent -> actualDistance += arrivedAtNodeEvent.getLastEdge().getDuration());
+    }
+    private double getDistance(Region.Node node1, Region.Node node2) {
+        Deque<Region.Node> path = pathCalculator.getPath(node1, node2);
+
+        if (path.isEmpty()) {
+            return 0;
+        }
+
+        long distance = 0;
+        Region.Node previousNode = node1;
+        Region.Node node = path.pollFirst();
+
+        do {
+            assert node != null;
+            distance += Objects.requireNonNull(region.getEdge(previousNode, node)).getDuration();
+            previousNode = node;
+            node = path.pollFirst();
+        } while (!path.isEmpty());
+
+        return distance;
+    }
     /**
      * A {@link Rater.Factory} for creating a new {@link TravelDistanceRater}.
      */

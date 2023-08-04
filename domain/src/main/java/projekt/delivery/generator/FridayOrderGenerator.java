@@ -1,11 +1,11 @@
 package projekt.delivery.generator;
 
+import projekt.base.Location;
+import projekt.base.TickInterval;
 import projekt.delivery.routing.ConfirmedOrder;
 import projekt.delivery.routing.VehicleManager;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
 import static org.tudalgo.algoutils.student.Student.crash;
 
@@ -18,6 +18,7 @@ import static org.tudalgo.algoutils.student.Student.crash;
 public class FridayOrderGenerator implements OrderGenerator {
 
     private final Random random;
+    private final Map<Long, List<ConfirmedOrder>> orders = new HashMap<>();
 
     /**
      * Creates a new {@link FridayOrderGenerator} with the given parameters.
@@ -32,12 +33,49 @@ public class FridayOrderGenerator implements OrderGenerator {
      */
     private FridayOrderGenerator(int orderCount, VehicleManager vehicleManager, int deliveryInterval, double maxWeight, double standardDeviation, long lastTick, int seed) {
         random = seed < 0 ? new Random() : new Random(seed);
-        crash(); // TODO: H7.1 - remove if implemented
+
+        for (int i = 0; i < orderCount; i++) {
+            long deliveryTime;
+            do {
+                deliveryTime = (long) ((random.nextGaussian(0.5, standardDeviation)) * lastTick);
+            } while (deliveryTime < 0.0 || deliveryTime > lastTick);
+
+            if (orders.containsKey(deliveryTime)) {
+                orders.get(deliveryTime).add(createRandomOrder(vehicleManager, deliveryTime, deliveryInterval, maxWeight));
+            } else {
+                orders.put(deliveryTime, new ArrayList<>(List.of(createRandomOrder(vehicleManager, deliveryTime, deliveryInterval, maxWeight))));
+            }
+        }
     }
 
     @Override
     public List<ConfirmedOrder> generateOrders(long tick) {
-        return crash(); // TODO: H7.1 - remove if implemented
+        if (tick < 0) {
+            throw new IndexOutOfBoundsException(tick);
+        }
+
+        return orders.getOrDefault(tick, List.of());
+    }
+
+    private ConfirmedOrder createRandomOrder(VehicleManager vehicleManager, long deliveryTime, long deliveryInterval, double maxWeight) {
+        VehicleManager.OccupiedRestaurant restaurant = new ArrayList<>(vehicleManager.getOccupiedRestaurants())
+            .get(random.nextInt(vehicleManager.getOccupiedRestaurants().size()));
+        Location location = new ArrayList<>(vehicleManager.getOccupiedNeighborhoods())
+            .get(random.nextInt(vehicleManager.getOccupiedNeighborhoods().size())).getComponent().getLocation();
+        double actualMaxWeight = random.nextDouble(maxWeight);
+        int foodCount = random.nextInt(1, 10);
+        List<String> foodList = new ArrayList<>();
+
+        for (int i = 0; i < foodCount; i++) {
+            foodList.add(restaurant.getComponent().getAvailableFood().get(random.nextInt(restaurant.getComponent().getAvailableFood().size())));
+        }
+
+        return new ConfirmedOrder(
+            location,
+            restaurant,
+            new TickInterval(deliveryTime , deliveryTime + deliveryInterval),
+            foodList,
+            actualMaxWeight);
     }
 
     /**

@@ -1,10 +1,14 @@
 package projekt.delivery.rating;
 
+import projekt.delivery.event.DeliverOrderEvent;
 import projekt.delivery.event.Event;
+import projekt.delivery.event.OrderReceivedEvent;
 import projekt.delivery.routing.ConfirmedOrder;
 import projekt.delivery.simulation.Simulation;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.tudalgo.algoutils.student.Student.crash;
 
@@ -19,6 +23,9 @@ public class InTimeRater implements Rater {
 
     private final long ignoredTicksOff;
     private final long maxTicksOff;
+    private long totalTicksOff = 0;
+    private long ordersDelivered = 0;
+    private final Set<ConfirmedOrder> pendingOrders = new HashSet<>();
 
     /**
      * Creates a new {@link InTimeRater} instance.
@@ -35,12 +42,47 @@ public class InTimeRater implements Rater {
 
     @Override
     public double getScore() {
-        return crash(); // TODO: H8.2 - remove if implemented
+        long maxTotalTicksOff = maxTicksOff * (ordersDelivered + pendingOrders.size());
+        long actualTotalTicksOff = totalTicksOff + pendingOrders.size() * maxTicksOff;
+
+        if (maxTotalTicksOff == 0) {
+            return 0;
+        }
+
+        return 1 - (((double) actualTotalTicksOff) / maxTotalTicksOff);
     }
 
     @Override
     public void onTick(List<Event> events, long tick) {
-        crash(); // TODO: H8.2 - remove if implemented
+        events.stream()
+            .filter(DeliverOrderEvent.class::isInstance)
+            .map(DeliverOrderEvent.class::cast)
+            .forEach(deliverOrderEvent -> {
+                ConfirmedOrder order = deliverOrderEvent.getOrder();
+
+                if (!pendingOrders.remove(order)) {
+                    throw new AssertionError("DeliverOrderEvent before OrderReceivedEvent");
+                }
+
+                long ticksOff;
+                if (order.getActualDeliveryTick() > order.getDeliveryInterval().end() + ignoredTicksOff) {
+                    ticksOff = Math.min(order.getActualDeliveryTick() - order.getDeliveryInterval().end() - ignoredTicksOff, maxTicksOff);
+                } else if (order.getActualDeliveryTick() < order.getDeliveryInterval().start() - ignoredTicksOff){
+                    ticksOff = Math.min(order.getDeliveryInterval().start() - order.getActualDeliveryTick() - ignoredTicksOff, maxTicksOff);
+                } else {
+                    ticksOff = 0;
+                }
+
+                totalTicksOff += ticksOff;
+
+                ordersDelivered++;
+            });
+
+        events.stream()
+            .filter(OrderReceivedEvent.class::isInstance)
+            .map(OrderReceivedEvent.class::cast)
+            .map(OrderReceivedEvent::getOrder)
+            .forEach(pendingOrders::add);
     }
 
     /**
