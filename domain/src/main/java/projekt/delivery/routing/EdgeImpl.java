@@ -3,6 +3,9 @@ package projekt.delivery.routing;
 import org.jetbrains.annotations.NotNull;
 import projekt.base.Location;
 
+import java.util.Comparator;
+import java.util.Objects;
+
 import static org.tudalgo.algoutils.student.Student.crash;
 
 /**
@@ -10,6 +13,8 @@ import static org.tudalgo.algoutils.student.Student.crash;
  */
 @SuppressWarnings("ClassCanBeRecord")
 class EdgeImpl implements Region.Edge {
+    private final static Comparator<Region.Edge> COMPARATOR =
+        Comparator.comparing(Region.Edge::getNodeA).thenComparing(Region.Edge::getNodeB);
 
     private final Region region;
     private final String name;
@@ -76,31 +81,46 @@ class EdgeImpl implements Region.Edge {
 
     @Override
     public Region.Node getNodeA() {
-        return crash(); // TODO: H4.1 - remove if implemented
+        return region.getNode(locationA);
     }
 
     @Override
     public Region.Node getNodeB() {
-        return crash(); // TODO: H4.1 - remove if implemented
+        return region.getNode(locationB);
     }
 
     @Override
     public int compareTo(Region.@NotNull Edge o) {
-        return crash(); // TODO: H4.2 - remove if implemented
+        return COMPARATOR.compare(this, o);
     }
 
     @Override
     public boolean equals(Object o) {
-        return crash(); // TODO: H4.3 - remove if implemented
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        EdgeImpl edge = (EdgeImpl) o;
+        return Objects.equals(name, edge.name)
+            && Objects.equals(locationA, edge.locationA)
+            && Objects.equals(locationB, edge.locationB)
+            && Objects.equals(duration, edge.duration);
     }
 
     @Override
     public int hashCode() {
-        return crash(); // TODO: H4.4 - remove if implemented
+        return Objects.hash(name, locationA, locationB, duration);
     }
 
     @Override
     public String toString() {
-        return crash(); // TODO: H4.5 - remove if implemented
+        return "EdgeImpl(" +
+            "name='" + getName() + "'"
+            + ", locationA='" + getLocationA() + "'"
+            + ", locationB='" + getLocationB() + "'"
+            + ", duration='" + getDuration() + "'"
+            + ')';
     }
 }

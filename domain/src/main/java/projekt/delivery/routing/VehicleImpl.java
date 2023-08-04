@@ -51,12 +51,46 @@ class VehicleImpl implements Vehicle {
 
     @Override
     public void moveDirect(Region.Node node, BiConsumer<? super Vehicle, Long> arrivalAction) {
-        crash(); // TODO: H5.4 - remove if implemented
+        checkMoveToNode(node);
+        moveQueue.clear();
+        if (occupied instanceof OccupiedEdgeImpl) {
+            // if a vehicle is on an edge, keep the movement to the next node
+            final @Nullable VehicleManager.Occupied<?> previousOccupied = occupied.vehicles.get(this).previous;
+            if (!(previousOccupied instanceof OccupiedNodeImpl<?>)) {
+                throw new AssertionError("Previous component must be a node");
+            }
+            final Region.Node previousNode = ((OccupiedNodeImpl<?>) previousOccupied).component;
+            final Region.Node nodeA = ((Region.Edge) occupied.component).getNodeA();
+            final Region.Node nodeB = ((Region.Edge) occupied.component).getNodeB();
+            final Region.Node nextNode = previousNode.equals(nodeA) ? nodeB : nodeA;
+            moveQueue.add(new PathImpl(new ArrayDeque<>(Collections.singleton(nextNode)), (v, t) -> {
+            }));
+        }
+        moveQueued(node, arrivalAction);
     }
 
     @Override
     public void moveQueued(Region.Node node, BiConsumer<? super Vehicle, Long> arrivalAction) {
-        crash(); // TODO: H5.3 - remove if implemented
+        checkMoveToNode(node);
+        Region.Node startNode = null;
+        final Iterator<PathImpl> it = moveQueue.descendingIterator();
+        while (it.hasNext() && startNode == null) {
+            PathImpl path = it.next();
+            if (!path.nodes().isEmpty()) {
+                startNode = path.nodes().peekLast();
+            }
+        }
+        // if no queued node could be found
+        if (startNode == null) {
+            if (occupied instanceof OccupiedNodeImpl<?>) {
+                startNode = ((OccupiedNodeImpl<?>) occupied).getComponent();
+            } else {
+                throw new AssertionError("It is not possible to be on an edge if the move queue is naturally empty");
+            }
+        }
+        final Deque<Region.Node> nodes = vehicleManager.getPathCalculator().getPath(startNode, node);
+        moveQueue.add(new PathImpl(nodes, ((BiConsumer<Vehicle, Long>) (v, t) ->
+            System.out.println("Vehicle " + v.getId() + " arrived at node " + node)).andThen(arrivalAction)));
     }
 
     @Override
@@ -125,11 +159,21 @@ class VehicleImpl implements Vehicle {
     }
 
     void loadOrder(ConfirmedOrder order) {
-        crash(); // TODO: H5.2 - remove if implemented
+        if (orders.size() >= capacity) {
+            throw new VehicleOverloadedException(this,orders.size());
+        }
+        int currentLoad = 0;
+        for (ConfirmedOrder o : orders) {
+            currentLoad += o.getWeight();
+        }
+        if (currentLoad + order.getWeight() > capacity) {
+            throw new VehicleOverloadedException(this,currentLoad + order.getWeight());
+        }
+        orders.add(order);
     }
 
     void unloadOrder(ConfirmedOrder order) {
-        crash(); // TODO: H5.2 - remove if implemented
+        orders.remove(order);
     }
 
     @Override

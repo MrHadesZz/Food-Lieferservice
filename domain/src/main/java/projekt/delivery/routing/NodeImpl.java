@@ -3,7 +3,10 @@ package projekt.delivery.routing;
 import org.jetbrains.annotations.Nullable;
 import projekt.base.Location;
 
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.tudalgo.algoutils.student.Student.crash;
 
@@ -54,36 +57,54 @@ class NodeImpl implements Region.Node {
 
     @Override
     public @Nullable Region.Edge getEdge(Region.Node other) {
-        return crash(); // TODO: H3.1 - remove if implemented
+        if (other == null || !other.getRegion().equals(this.region)) {
+            return null;
+        }
+        return region.getEdge(this.location, other.getLocation());
     }
 
     @Override
     public Set<Region.Node> getAdjacentNodes() {
-        return crash(); // TODO: H3.2 - remove if implemented
+        return connections.stream().map(region::getNode).collect(Collectors.toSet());
     }
 
     @Override
     public Set<Region.Edge> getAdjacentEdges() {
-        return crash(); // TODO: H3.3 - remove if implemented
+        return connections.stream().map(c -> region.getEdge(getLocation(), c)).collect(Collectors.toSet());
     }
 
     @Override
     public int compareTo(Region.Node o) {
-         return crash(); // TODO: H3.4 - remove if implemented
+        return location.compareTo(o.getLocation());
     }
 
     @Override
     public boolean equals(Object o) {
-        return crash(); // TODO: H3.5 - remove if implemented
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        NodeImpl node = (NodeImpl) o;
+        if (hashCode() != node.hashCode()) {
+            return false;
+        }
+        return Objects.equals(name, node.name)
+            && Objects.equals(location, node.location)
+            && Objects.equals(connections, node.connections);
     }
 
     @Override
     public int hashCode() {
-        return crash(); // TODO: H3.6 - remove if implemented
+        return Objects.hash(name, location, connections);
     }
 
     @Override
     public String toString() {
-        return crash(); // TODO: H3.7 - remove if implemented
+        return "NodeImpl(name='" + getName() + "'"
+            + ", location='" + getLocation() + "'"
+            + ", connections='" + connections + "'"
+            + ')';
     }
 }

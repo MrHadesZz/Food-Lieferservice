@@ -32,22 +32,28 @@ class RegionImpl implements Region {
 
     @Override
     public @Nullable Node getNode(Location location) {
-        return crash(); // TODO: H2.1 - remove if implemented
+        return nodes.get(location);
     }
 
     @Override
     public @Nullable Edge getEdge(Location locationA, Location locationB) {
-        return crash(); // TODO: H2.3 - remove if implemented
+        Edge edge = null;
+        if (edges.containsKey(locationA) && edges.get(locationA).containsKey(locationB)) {
+            edge = edges.get(locationA).get(locationB);
+        } else if (edges.containsKey(locationB) && edges.get(locationB).containsKey(locationA)) {
+            edge = edges.get(locationB).get(locationA);
+        }
+        return edge;
     }
 
     @Override
     public Collection<Node> getNodes() {
-        return crash(); // TODO: H2.5 - remove if implemented
+        return Collections.unmodifiableCollection(nodes.values());
     }
 
     @Override
     public Collection<Edge> getEdges() {
-        return crash(); // TODO: H2.5 - remove if implemented
+        return Collections.unmodifiableCollection(allEdges);
     }
 
     @Override
@@ -60,7 +66,10 @@ class RegionImpl implements Region {
      * @param node the {@link NodeImpl} to add.
      */
     void putNode(NodeImpl node) {
-        crash(); // TODO: H2.2 - remove if implemented
+        if (node.getRegion() != this) {
+            throw new IllegalArgumentException("Node " + node + " has incorrect region");
+        }
+        nodes.put(node.getLocation(), node);
     }
 
     /**
@@ -68,16 +77,39 @@ class RegionImpl implements Region {
      * @param edge the {@link EdgeImpl} to add.
      */
     void putEdge(EdgeImpl edge) {
-        crash(); // TODO: H2.4 - remove if implemented
+        Node nodeA = edge.getNodeA();
+        Node nodeB = edge.getNodeB();
+        if (nodeA == null) {
+            throw new IllegalArgumentException("NodeA " + edge.getLocationA().toString() + " is not part of the region");
+        } else if (nodeB == null) {
+            throw new IllegalArgumentException("NodeB " + edge.getLocationB().toString() + " is not part of the region");
+        }
+        if (edge.getRegion() != this || nodeA.getRegion() != this || nodeB.getRegion() != this) {
+            throw new IllegalArgumentException("Edge " + edge + " has incorrect region");
+        }
+        Location locationA = nodeA.getLocation();
+        Location locationB = nodeB.getLocation();
+        if (!edges.containsKey(locationA)) {
+            edges.put(locationA, new HashMap<>());
+        }
+        edges.get(locationA).put(locationB, edge);
+        allEdges.add(edge);
+        allEdges.sort(null);
     }
 
     @Override
     public boolean equals(Object o) {
-        return crash(); // TODO: H2.6 - remove if implemented
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof RegionImpl other)) {
+            return false;
+        }
+        return Objects.equals(nodes, other.nodes) && Objects.equals(edges, other.edges);
     }
 
     @Override
     public int hashCode() {
-        return crash(); // TODO: H2.7 - remove if implemented
+        return Objects.hash(nodes, edges);
     }
 }
